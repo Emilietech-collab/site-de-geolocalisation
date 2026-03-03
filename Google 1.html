@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>EmillieTech · Géolocalisation satellite</title>
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Font Awesome 6 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            color: #e2e8f0;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            /* Image de fond + flou */
+            background-image: url('../accueil/9bf62b82-0227-4ac1-85e8-fe3a35d2d7ef.jpeg'); /* Changez l'URL si vous voulez */
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            position: relative;
+        }
+
+        /* Overlay de flou (pour que le fond soit flouté) */
+        body::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            backdrop-filter: blur(0px); /* Ajustez le flou ici */
+            background: rgba(0, 0, 0, 0.3); /* Légère surbrillance sombre pour lisibilité */
+            z-index: -1;
+        }
+
+        /* Header élégant avec transparence */
+        header {
+            background: skyblue;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(37, 99, 235, 0.3);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            z-index: 10;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        
+
+        .site-title h1 {
+            font-size: 1.8rem;
+            font-weight: 600;
+            color: white;
+            letter-spacing: -0.02em;
+            text-shadow: 0 2px 5px rgba(0,0,0,0.5);
+        }
+
+        .site-title p {
+            font-size: 0.9rem;
+            color: #cbd5e1;
+            margin-top: 2px;
+        }
+
+        /* Bouton d'accueil */
+        .home-btn {
+            background: rgba(27, 98, 212, 0.8);
+            backdrop-filter: blur(5px);
+            color: #e2e8f0;
+            border: 1px solid #334155;
+            padding: 0.6rem 1.8rem;
+            border-radius: 40px;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            font-size: 1rem;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .home-btn:hover {
+            background: rgba(51, 65, 85, 0.9);
+            border-color: #475569;
+            color: white;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .home-btn i {
+            color: #2563eb;
+            font-size: 1.1rem;
+        }
+
+        .main-content {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 2rem 1rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .map-wrapper {
+            width: 100%;
+            max-width: 1200px;
+            height: 70vh;
+            max-height: 700px;
+            border-radius: 32px;
+            overflow: hidden;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            border: 1px solid #1e293b;
+            position: relative;
+            background: #1e293b;
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        .info-card {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 1.2rem 1.8rem;
+            border: 1px solid rgba(37, 99, 235, 0.3);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.4);
+            z-index: 10;
+            max-width: 320px;
+            width: calc(100% - 40px);
+            color: #f1f5f9;
+        }
+
+        .info-card h3 {
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #2563eb;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem 1.5rem;
+        }
+
+        .info-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .info-label {
+            font-size: 0.7rem;
+            color: #94a3b8;
+            text-transform: uppercase;
+            font-weight: 500;
+        }
+
+        .info-value {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: white;
+            line-height: 1.2;
+        }
+
+        .info-unit {
+            font-size: 0.7rem;
+            color: #64748b;
+            margin-left: 4px;
+        }
+
+        .badge {
+            background: #2563eb;
+            color: white;
+            font-size: 0.65rem;
+            font-weight: 600;
+            padding: 0.2rem 0.6rem;
+            border-radius: 40px;
+            text-transform: uppercase;
+        }
+
+        .status-row {
+            grid-column: span 2;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 0.5rem;
+            padding-top: 0.8rem;
+            border-top: 1px solid #1e293b;
+        }
+
+        /* Footer plus grand */
+        footer {
+            background: rgb(54, 4, 190);
+            backdrop-filter: blur(10px);
+            padding: 1.5rem 2rem;
+            text-align: center;
+            font-size: 1rem;
+            color: #cbd5e1;
+            border-top: 1px solid rgba(37, 99, 235, 0.3);
+            z-index: 10;
+        }
+.titre{
+    color: rgb(11, 8, 199);
+    text-align: center;
+}
+        footer i {
+            color: #2563eb;
+            margin: 0 4px;
+        }
+
+        .custom-marker {
+            background: #2563eb;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.3);
+            border: 2px solid white;
+        }
+
+        @media (max-width: 640px) {
+            header {
+                padding: 0.8rem 1rem;
+            }
+            .site-title h1 {
+                font-size: 1.4rem;
+            }
+            .site-title p {
+                font-size: 0.8rem;
+            }
+            .home-btn span {
+                display: none;
+            }
+            .home-btn i {
+                margin-right: 0;
+            }
+            .map-wrapper {
+                height: 60vh;
+                border-radius: 24px;
+            }
+            .info-card {
+                left: 16px;
+                right: 16px;
+                bottom: 16px;
+                max-width: none;
+                padding: 1rem;
+            }
+            .info-grid {
+                gap: 0.8rem;
+            }
+            .info-value {
+                font-size: 1.1rem;
+            }
+            footer {
+                padding: 1.2rem 1rem;
+                font-size: 0.9rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="brand">
+            <div class="site-icon">
+                <i class="fas fa-map-location-dot"></i>
+            </div>
+            <div class="site-title">
+                <h1>EmillieTech</h1>
+                
+            </div>
+        </div>
+        <h3 class="titre"> <strong> PLAN DE LOCALISATION </strong></h3>
+        <a href="../accueil/Accueil.html" class="home-btn" title="Retour à l'accueil">
+            <i class="fas fa-home"></i>
+            <span>Accueil</span>
+        </a>
+    </header>
+
+    <div class="main-content">
+        <div class="map-wrapper">
+            <div id="map"></div>
+
+            <div class="info-card">
+                <h3><i class="fas fa-satellite"></i> STATUT SIGNAL</h3>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <span class="info-label">Précision</span>
+                        <span class="info-value" id="accuracy">--- <span class="info-unit">m</span></span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Altitude</span>
+                        <span class="info-value" id="altitude">--- <span class="info-unit">m</span></span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Vitesse</span>
+                        <span class="info-value" id="speed">--- <span class="info-unit">km/h</span></span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Cap</span>
+                        <span class="info-value" id="heading">--- <span class="info-unit">°</span></span>
+                    </div>
+                    <div class="status-row">
+                        <span class="info-label">Suivi temps réel</span>
+                        <span class="badge" id="trackingStatus">ACTIF</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div
+</div>
+    <footer>
+        <i class="fas fa-map-pin"></i>Nous trouver une grace pour nous et vos problèmes.Localisation satellite avec stadiamaps.
+    </footer>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <script>
+        (function() {
+            
+            const STADIA_API_KEY = '8327b7dc-6283-41bb-bc67-f7be45d561f0'; // <--- Mettez votre clé ici
+
+            // Initialisation de la carte
+            const map = L.map('map').setView([48.8566, 2.3522], 16);
+
+            // Style "Alidade Satellite" de Stadia Maps (satellite + noms)
+            L.tileLayer(`https://tiles.stadiamaps.com/tiles/alidade_satellite/{z}/{x}/{y}{r}.jpg?api_key=${STADIA_API_KEY}`, {
+                attribution: '&copy; <a href="https://www.stadiamaps.com/" target="_blank">Stadia Maps</a>, &copy; <a href="https://openmaptiles.org/" target="_blank">OpenMapTiles</a>, &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+                maxZoom: 20
+            }).addTo(map);
+
+            // Variables
+            let currentMarker = null;
+            let accuracyCircle = null;
+            let watchId = null;
+            let lastPosition = null;
+            let followMode = true;
+
+            // Éléments DOM
+            const accuracyEl = document.getElementById('accuracy');
+            const altitudeEl = document.getElementById('altitude');
+            const speedEl = document.getElementById('speed');
+            const headingEl = document.getElementById('heading');
+            const trackingStatusEl = document.getElementById('trackingStatus');
+
+            // Icône personnalisée
+            const customIcon = L.divIcon({
+                className: 'custom-marker',
+                iconSize: [20, 20],
+                popupAnchor: [0, -10]
+            });
+
+            function updateInfo(position) {
+                const coords = position.coords;
+                accuracyEl.innerHTML = (coords.accuracy ? coords.accuracy.toFixed(1) : '---') + ' <span class="info-unit">m</span>';
+                altitudeEl.innerHTML = (coords.altitude ? coords.altitude.toFixed(1) : '---') + ' <span class="info-unit">m</span>';
+                if (coords.speed !== null && !isNaN(coords.speed)) {
+                    const speedKmh = (coords.speed * 3.6).toFixed(1);
+                    speedEl.innerHTML = speedKmh + ' <span class="info-unit">km/h</span>';
+                } else {
+                    speedEl.innerHTML = '--- <span class="info-unit">km/h</span>';
+                }
+                if (coords.heading !== null && !isNaN(coords.heading)) {
+                    headingEl.innerHTML = coords.heading.toFixed(0) + ' <span class="info-unit">°</span>';
+                } else {
+                    headingEl.innerHTML = '--- <span class="info-unit">°</span>';
+                }
+            }
+
+            function updateMarkerAndCircle(lat, lng, accuracy) {
+                if (currentMarker) {
+                    currentMarker.setLatLng([lat, lng]);
+                } else {
+                    currentMarker = L.marker([lat, lng], { icon: customIcon }).addTo(map);
+                    currentMarker.bindPopup('Votre position');
+                }
+
+                if (accuracyCircle) {
+                    accuracyCircle.setLatLng([lat, lng]);
+                    accuracyCircle.setRadius(accuracy);
+                } else {
+                    accuracyCircle = L.circle([lat, lng], {
+                        radius: accuracy,
+                        color: '#2563eb',
+                        weight: 2,
+                        opacity: 0.6,
+                        fillColor: '#2563eb',
+                        fillOpacity: 0.15,
+                        interactive: false
+                    }).addTo(map);
+                }
+            }
+
+            function centerMapIfNeeded(lat, lng) {
+                if (followMode) {
+                    map.setView([lat, lng], Math.max(map.getZoom(), 16));
+                }
+            }
+
+            function onLocationSuccess(position) {
+                const lat = position.coords.latitude;
+                const lng = position.coords.longitude;
+                const accuracy = position.coords.accuracy;
+
+                lastPosition = { lat, lng, accuracy };
+
+                updateMarkerAndCircle(lat, lng, accuracy);
+                updateInfo(position);
+                centerMapIfNeeded(lat, lng);
+
+                trackingStatusEl.textContent = 'ACTIF';
+                trackingStatusEl.style.backgroundColor = '#2563eb';
+            }
+
+            function onLocationError(error) {
+                console.warn('Erreur de géolocalisation', error);
+                trackingStatusEl.textContent = 'INACTIF';
+                trackingStatusEl.style.backgroundColor = '#64748b';
+            }
+
+            function startTracking() {
+                if (!navigator.geolocation) {
+                    alert("Votre navigateur ne supporte pas la géolocalisation.");
+                    trackingStatusEl.textContent = 'NON SUPPORTÉ';
+                    trackingStatusEl.style.backgroundColor = '#ef4444';
+                    return;
+                }
+
+                const options = {
+                    enableHighAccuracy: true,
+                    maximumAge: 0,
+                    timeout: 10000
+                };
+
+                watchId = navigator.geolocation.watchPosition(onLocationSuccess, onLocationError, options);
+            }
+
+            map.on('dragstart', () => {
+                followMode = false;
+                trackingStatusEl.textContent = 'PAUSÉ';
+                trackingStatusEl.style.backgroundColor = '#f97316';
+            });
+
+            startTracking();
+
+            if (!navigator.geolocation) {
+                trackingStatusEl.textContent = 'NON SUPPORTÉ';
+                trackingStatusEl.style.backgroundColor = '#ef4444';
+            }
+        })();
+    </script>
+</body>
+</html>
+
